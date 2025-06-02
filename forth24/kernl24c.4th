@@ -233,42 +233,47 @@ VARIABLE 'LEAVE ( --- a-addr)
 \G Start a new definition, enter compilation mode.
   !CSP HEADER CALL, LIT DOCOL , ] ;
 
-: BEGIN ( --- x )
-\G Start a BEGIN UNTIL or BEGIN WHILE REPEAT loop.
-  HERE ; IMMEDIATE
+: ?PAIRS ( n1 n2 ---)
+\G Check that n1 matches n2, throw an error if not, used to check
+\G correct pairing of control structures.
+    - -22 ?THROW ;
 
-: UNTIL ( x --- )
+: BEGIN ( --- x n )
+\G Start a BEGIN UNTIL or BEGIN WHILE REPEAT loop.
+  HERE 1 ; IMMEDIATE
+
+: UNTIL ( x n --- )
 \G Form a loop with matching BEGIN.
 \G Runtime: A flag is take from the stack
 \G each time UNTIL is encountered and the loop iterates until it is nonzero.
-  POSTPONE ?BRANCH , ; IMMEDIATE
+  1 ?PAIRS POSTPONE ?BRANCH , ; IMMEDIATE
 
-: IF    ( --- x)
+: IF    ( --- x n)
 \G Start an IF THEN or IF ELSE THEN construction.
 \G Runtime: At IF a flag is taken from
 \G the stack and if it is true the part between IF and ELSE is executed,
 \G otherwise the part between ELSE and THEN. If there is no ELSE, the part
 \G between IF and THEN is executed only if flag is true.
-   POSTPONE ?BRANCH HERE 1 CELLS ALLOT ; IMMEDIATE
+   POSTPONE ?BRANCH HERE 1 CELLS ALLOT 2 ; IMMEDIATE
 
-: THEN ( x ---)
+: THEN ( x n ---)
 \G End an IF THEN or IF ELSE THEN construction.
-   HERE SWAP ! ; IMMEDIATE
+   2 ?PAIRS HERE SWAP ! ; IMMEDIATE
 
-: ELSE ( x1 --- x2)
+: ELSE ( x1 n1 --- x2 n1)
 \G part of IF ELSE THEN construction.
-   POSTPONE BRANCH HERE 1 CELLS ALLOT SWAP POSTPONE THEN ; IMMEDIATE
+  POSTPONE BRANCH HERE 1 CELLS ALLOT 2 2SWAP POSTPONE THEN ; IMMEDIATE
 
-: WHILE  ( x1 --- x2 x1 )
+: WHILE  ( x1 n1 --- x2 n2 x1 n3 )
 \G part of BEGIN WHILE REPEAT construction.
 \G Runtime: At WHILE a flag is taken from the stack. If it is false,
 \G  the program jumps out of the loop, otherwise the part between WHILE
 \G  and REPEAT is executed and the loop iterates to BEGIN.
-  POSTPONE IF SWAP ; IMMEDIATE
+   POSTPONE IF 2SWAP ; IMMEDIATE
 
 : REPEAT ( x1 x2 --- )
 \G part of BEGIN WHILE REPEAT construction.
-  POSTPONE BRANCH , POSTPONE THEN ; IMMEDIATE
+  1 ?PAIRS POSTPONE BRANCH , POSTPONE THEN ; IMMEDIATE
 
 VARIABLE POCKET ( --- a-addr )
 \G Buffer for S" strings that are interpreted.
@@ -290,19 +295,19 @@ VARIABLE POCKET ( --- a-addr )
 \G Compile the first character of "ccc" as a literal.
   CHAR LITERAL ; IMMEDIATE
 
-: DO ( --- x1 x2)
+: DO ( --- x1 x2 n1 )
 \G Start a DO LOOP.
 \G Runtime: ( n1 n2 --- ) start a loop with initial count n2 and
 \G limit n1.
 \ While compiling x1 is previous contents of 'LEAVE (for nested loops) and
 \ x2 is address after (DO) to branch back from (LOOP)    
-  POSTPONE (DO) 'LEAVE @ HERE 0 'LEAVE ! ; IMMEDIATE
+  POSTPONE (DO) 'LEAVE @ HERE 0 'LEAVE ! 3 ; IMMEDIATE
 
-: ?DO ( --- x1 x2 )
+: ?DO ( --- x1 x2 n1 )
 \G Start a ?DO LOOP.
 \G Runtime: ( n1 n2 --- ) start a loop with initial count n2 and
 \G limit n1. Exit immediately if n1 = n2.    
-  POSTPONE (?DO) 'LEAVE @ HERE 'LEAVE ! 0 , HERE ; IMMEDIATE
+  POSTPONE (?DO) 'LEAVE @ HERE 'LEAVE ! 0 , HERE 3 ; IMMEDIATE
 
 : LEAVE ( --- )
 \G Runtime: leave the matching DO LOOP immediately.
@@ -316,16 +321,16 @@ VARIABLE POCKET ( --- a-addr )
           'LEAVE @
           BEGIN DUP WHILE DUP @ HERE ROT ! REPEAT DROP ;
 
-: LOOP  ( x1 x2 --- )
+: LOOP  ( x1 x2 n1 --- )
 \G End a DO LOOP.
 \G Runtime: Add 1 to the count and if it is equal to the limit leave the loop.
-  POSTPONE (LOOP) , RESOLVE-LEAVE 'LEAVE ! ; IMMEDIATE
+  3 ?PAIRS POSTPONE (LOOP) , RESOLVE-LEAVE 'LEAVE ! ; IMMEDIATE
 
-: +LOOP ( x1 x2 --- )
+: +LOOP ( x1 x2 n1 --- )
 \G End a DO +LOOP
 \G Runtime: ( n ---) Add n to the count and exit if this crosses the
 \G boundary between limit-1 and limit.
-  POSTPONE (+LOOP) , RESOLVE-LEAVE 'LEAVE ! ; IMMEDIATE
+  3 ?PAIRS POSTPONE (+LOOP) , RESOLVE-LEAVE 'LEAVE ! ; IMMEDIATE
 
 : RECURSE ( --- )
 \G Compile a call to the current (not yet finished) definition.
@@ -613,8 +618,8 @@ VARIABLE NESTING
 : F-STARTUP
     \G This is the first colon definition called after a (cold) startup.
     AT-STARTUP @ 0= IF
-      ." Agon 24-bit eZ80 Forth v0.32, 2024-10-18 GPLv3" CR
-      ." Copyright (C) 2024 L.C. Benschop, Brad Rodriguez, S. Jackson" CR
+      ." Agon 24-bit eZ80 Forth v0.33, 2025-06-02 GPLv3" CR
+      ." Copyright (C) 2025 L.C. Benschop, Brad Rodriguez, S. Jackson" CR
     THEN	
     0 SYSVARS 5 + C!
     0 HERE C!

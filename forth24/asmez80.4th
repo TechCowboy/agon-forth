@@ -33,15 +33,20 @@ ASSEMBLER ALSO DEFINITIONS
 
 VARIABLE ADLFLAG
 
+: ?RANGE8 ( n --- n)
+\ Check whether n is in range for 8-bit signed.
+    DUP -$81 > OVER $80 < AND 0= ABORT" Relative jump out of range"
+;
+
 \ Used in IF/THEN/ELSE/BEGIN/UNTIL/WHILE/REPEAT/AGAIN commands.
 : <MARK ( --- addr )
   HERE ;
 : <RESOLVE ( addr ---)
-  HERE 1+ - C, ;
+  HERE 1+ - ?RANGE8 C, ;
 : >MARK ( --- addr )
   HERE 0 C, ;
 : >RESOLVE ( addr --- )
-  HERE OVER 1+ - SWAP VC! ;
+  HERE OVER 1+ - ?RANGE8 SWAP VC! ;
 
 \ Used in @IF/@THEN/@ELSE/@BEGIN/@UNTIL/@WHILE/@REPEAT/@AGAIN commands.
 : <@MARK ( --- addr )
@@ -137,9 +142,9 @@ NOINSTR
 	ADJUST-OPSIZE
 	CASE ?OPERAND @
 	    1 OF C, ENDOF \ 8 bit operand
-	    2 OF , HERE H. -1 ALLOT HERE H. ." JJJ" CR ENDOF \ 16 bit operand
+	    2 OF , HERE H. -1 ALLOT ENDOF \ 16 bit operand
 	    3 OF , ENDOF \ 24 bit operand
-	    4 OF HERE 1+ - C, ENDOF \ relative address
+	    4 OF HERE 1+ - ?RANGE8 C, ENDOF \ relative address
 	ENDCASE
     THEN
     NOINSTR

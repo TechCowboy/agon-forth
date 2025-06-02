@@ -323,7 +323,6 @@ DEFINITIONS
 \G Print number n1 right-justified in a field of width n2.
  >R S>D R> D.R ;
 
-
 : VALUE ( n --- )
 \G Create a variable that returns its value when executed, prefix it with TO
 \G to change its value.    
